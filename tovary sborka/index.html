@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://vk.com/js/api/openapi.js?139" type="text/javascript"></script>
+
+    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+
+</head>
+<body>
+    <script type="text/javascript">
+        VK.init({
+            apiId: 5846294
+        });
+
+    </script>
+    <input id="bttnLogIn" value="Login" type="button">
+    <input id="bttnLogOut" value="Logout" type="button">
+    <input id="bttnPostGood" value="PostGood" type="button">
+    <input id="bttnTest" value="Test" type="button">
+    <form name="urlpasteform">
+      <input name="urlPasted">
+      <input id="submitBttn" type="button" value="Загрузить товар">
+    </form>
+    <script>
+
+
+        //   
+        bttnLogIn.onclick = function () {
+            function callBackFunc () {alert ('Logged in')};
+            VK.Auth.login (callBackFunc, 134217728+1+4+2);
+        };
+        bttnLogOut.onclick = function () {
+            VK.Auth.logout ()
+        };
+
+        // Получение айдишника из введенной ссылки и отсылка этого id в getproduct.php
+        var productObject;
+        submitBttn.onclick = function getProductId() {
+          var link = document.forms.urlpasteform.elements.urlPasted.value;
+          var htmlPos = link.indexOf('.html');
+          var productId = link.charAt(htmlPos - 1);
+          for (var i = 1; i < 19; i++) {
+            var nextPosition = htmlPos - i;
+            var symbol = link[nextPosition-1];
+            var numberFromSymbol = +symbol;
+            if (!isNaN(numberFromSymbol)) {
+              productId = symbol + productId;
+            }  else break;
+
+          }
+
+          if (!isNaN(productId) && htmlPos > 2) {
+            console.log (productId);
+            $.post('getproduct.php', {
+              productIdToPhp: productId,
+            }, function (json) {
+              console.log (json);
+              var jsonMadeObject = JSON.parse (json);
+              console.log (jsonMadeObject)
+              productObject = jsonMadeObject;
+            });
+          } else {
+            alert ('Ссылка не подходит. Пожалуйста, введите ссылку на конкретный товар Aliexpress')
+          }
+
+        }
+
+        //   (  )
+        bttnPostGood.onclick = function () {
+            VK.Api.call('photos.getMarketUploadServer',{
+                group_id: 139492257,
+                main_photo: 1,
+                crop_x: 0,
+                crop_y: 0,
+//                crop_width: 400
+            }, function (data) {
+                $.post('vkuploadimg.php', {
+                  upload_url: data.response.upload_url,
+                }, function (json) {
+                  var jsonMadeObject = JSON.parse (json);
+                  console.log (jsonMadeObject);
+                  VK.Api.call('photos.saveMarketPhoto', {
+                    group_id: 139492257,
+                    photo: jsonMadeObject.photo,
+                    hash: jsonMadeObject.hash,
+                    server: jsonMadeObject.server,
+                    crop_data: jsonMadeObject.crop_data,
+                    crop_hash: jsonMadeObject.crop_hash
+                  }, function (responsePhoto) {
+                    console.log (responsePhoto.response[0].pid);
+                    VK.Api.call ('market.add',{
+                      owner_id: -139492257,
+                      name: productObject.name.substr(0,90),
+                      description: String.fromCodePoint(0x1F534,0x1F534,0x1F534,0x1F534,0x1F534,0x1F534,0x1F534,0x1F534,0x1F534)+"\\n"+productObject.name,
+                      category_id: 4,
+                      price: productObject.price,
+                      main_photo_id: responsePhoto.response[0].pid
+                    }, function (idTov) {
+                      console.log (idTov);
+                    })
+                  })
+                }
+                );
+          });
+        };
+
+//
+        bttnTest.onclick = function () {
+          VK.Api.call('groups.get', {
+            filter: 'moder',
+            extended: 1
+          }, function (data) {
+            console.log (data);
+          });
+        };
+
+
+
+
+
+    </script>
+</body>
+</html>
